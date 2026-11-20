@@ -4,6 +4,15 @@
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
+# Keep PATH free of duplicates
+typeset -U path PATH
+
+# Homebrew (macOS or Linux), loaded here so non-login shells get it too
+for brew_bin in /opt/homebrew/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  [[ -x $brew_bin ]] && eval "$($brew_bin shellenv)" && break
+done
+unset brew_bin
+
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -70,19 +79,28 @@ ZSH_THEME="robbyrussell"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git)
+# nvm loads the first time node, npm or nvm runs, so new shells start fast
+zstyle ':omz:plugins:nvm' lazy yes
+
+plugins=(git kubectl kube-ps1 nvm)
 
 source $ZSH/oh-my-zsh.sh
+
+# Show the current Kubernetes context and namespace in the prompt
+# (kubeoff / kubeon hide and show it)
+if (( $+commands[kubectl] )); then
+  PROMPT='$(kube_ps1) '$PROMPT
+fi
 
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
 
-# Neovim path
-export PATH="$PATH:/opt/nvim-linux64/bin"
-
 # Go path
 export PATH=$PATH:/usr/local/go/bin
+
+# Binaries installed with go install
+export PATH=$PATH:$HOME/go/bin
 
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
@@ -111,9 +129,9 @@ alias zshconfig="nvim ~/.zshrc"
 alias py="python3"
 alias tf="terraform"
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
 autoload -U +X bashcompinit && bashcompinit
-complete -o nospace -C /opt/homebrew/bin/terraform terraform
+(( $+commands[terraform] )) && complete -o nospace -C "$(command -v terraform)" terraform
+export PATH="$HOME/.local/bin:$PATH"
+
+# Machine-specific and private settings live outside the repo
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
